@@ -55,7 +55,7 @@ N_ROWS = st.slider(
 DELAY = st.number_input(
     "Chọn thời gian xử lý tác vụ (giây):",
     min_value=1,
-    max_value=60, # Tăng giới hạn để user có thể test 20s
+    max_value=60000, # Tăng giới hạn để user có thể test 20s
     value=5,
     step=1,
     key="delay_time_input"
