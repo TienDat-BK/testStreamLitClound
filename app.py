@@ -1,110 +1,89 @@
 import streamlit as st
+import time
+import pandas as pd
+import numpy as np
 
-# Thiết lập tiêu đề trang
 st.set_page_config(
-    page_title="Máy Tính BMI Đơn Giản",
-    page_icon="⚖️",
+    page_title="Streamlit Caching Demo",
+    page_icon="⏱️",
     layout="centered"
 )
 
-# Hàm tính toán chỉ số BMI
-def calculate_bmi(weight, height, unit):
-    """Tính BMI dựa trên đơn vị được chọn."""
-    if unit == "Metric (kg, m)":
-        # Công thức: kg / (m^2)
-        if height == 0:
-            return 0
-        return weight / (height ** 2)
-    elif unit == "Imperial (lbs, ft)":
-        # Công thức: (lbs / (in^2)) * 703
-        if height == 0:
-            return 0
-        # Chuyển đổi feet sang inch
-        height_in_inches = height * 12
-        return (weight / (height_in_inches ** 2)) * 703
-
-# Hàm phân loại chỉ số BMI
-def classify_bmi(bmi):
-    """Phân loại tình trạng sức khỏe dựa trên chỉ số BMI."""
-    if bmi == 0:
-        return "Vui lòng nhập số liệu hợp lệ"
-    elif bmi < 18.5:
-        return "Thiếu cân (Underweight)"
-    elif 18.5 <= bmi < 24.9:
-        return "Cân nặng khỏe mạnh (Healthy Weight)"
-    elif 25 <= bmi < 29.9:
-        return "Thừa cân (Overweight)"
-    else:
-        return "Béo phì (Obesity)"
-
-# --- Giao diện người dùng ---
-
-st.title("⚖️ Máy Tính Chỉ Số BMI (Body Mass Index)")
+st.title("⏱️ Demo Xử lý Tác vụ Chạy Lâu với Caching")
+st.markdown("Sử dụng `@st.cache_data` để ngăn tác vụ chạy lại không cần thiết.")
 st.markdown("---")
 
-# 1. Chọn hệ thống đơn vị
-unit_system = st.radio(
-    "Chọn hệ thống đo lường:",
-    ["Metric (kg, m)", "Imperial (lbs, ft)"],
-    key="unit_select"
+# ----------------------------------------------------
+# 1. Định nghĩa Hàm chạy lâu và áp dụng CACHING
+# ----------------------------------------------------
+@st.cache_data
+def load_heavy_data(num_rows, delay_time):
+    """
+    Hàm mô phỏng việc tải dữ liệu hoặc tính toán nặng.
+    Nó chỉ chạy 1 LẦN duy nhất trừ khi tham số đầu vào thay đổi.
+    """
+    # Mô phỏng độ trễ (Delay)
+    st.info(f"Đang thực hiện tác vụ nặng... (Chờ {delay_time} giây)")
+    time.sleep(delay_time) 
+    
+    # Tạo một DataFrame lớn
+    data = pd.DataFrame(
+        np.random.randn(num_rows, 5),
+        columns=['A', 'B', 'C', 'D', 'E']
+    )
+    st.success("Tác vụ nặng đã hoàn thành và kết quả đã được lưu cache! 🎉")
+    return data
+
+# ----------------------------------------------------
+# 2. Giao diện người dùng
+# ----------------------------------------------------
+
+# Widget để thay đổi input (tham số của hàm load_heavy_data)
+st.subheader("Tham số đầu vào (Inputs)")
+N_ROWS = st.slider(
+    "Chọn số lượng hàng dữ liệu:",
+    min_value=100,
+    max_value=10000,
+    step=100,
+    value=1000,
+    key="rows"
 )
 
-# 2. Nhập dữ liệu dựa trên đơn vị được chọn
-if unit_system == "Metric (kg, m)":
-    st.subheader("Hệ Mét (Metric System)")
-    weight = st.slider("Cân nặng (kg):", 20.0, 200.0, 70.0, 0.5, key="weight_kg")
-    height = st.slider("Chiều cao (m):", 1.0, 2.5, 1.75, 0.01, key="height_m")
-elif unit_system == "Imperial (lbs, ft)":
-    st.subheader("Hệ Anh (Imperial System)")
-    weight = st.slider("Cân nặng (lbs):", 50.0, 450.0, 150.0, 0.5, key="weight_lbs")
+# Nút để kích hoạt việc chạy lại (Re-run)
+if st.button("Chạy lại (Rerun Script)", key="rerun_button"):
+    st.toast("Đang chạy lại toàn bộ script...")
     
-    # Chia thanh trượt cho Feet và Inches để dễ nhập hơn
-    col1, col2 = st.columns(2)
-    with col1:
-        feet = st.slider("Chiều cao (feet):", 3, 8, 5, key="height_ft")
-    with col2:
-        inches = st.slider("Chiều cao (inches):", 0, 11, 10, key="height_in")
-        
-    # Chuyển đổi sang đơn vị tính toán: Tổng số feet
-    # Trong công thức Imperial, cần inch, nhưng Streamlit Community Cloud sẽ dùng công thức này
-    height = feet + (inches / 12) 
+# Ghi chú về thời gian delay (thời gian mô phỏng tác vụ nặng)
+DELAY = 5
 
+# ----------------------------------------------------
+# 3. Gọi hàm và xử lý Loading State
+# ----------------------------------------------------
 
-# --- Hiển thị kết quả ---
-st.markdown("---")
+st.subheader("Kết quả Tác vụ")
 
-# Tính toán
-if unit_system == "Metric (kg, m)":
-    bmi_value = calculate_bmi(weight, height, unit_system)
-    
-elif unit_system == "Imperial (lbs, ft)":
-    # Phải chuyển đổi lại chiều cao sang inch cho hàm tính toán chính xác
-    height_in_inches = (feet * 12) + inches
-    bmi_value = (weight / (height_in_inches ** 2)) * 703 if height_in_inches > 0 else 0
+# Sử dụng st.spinner để hiển thị trạng thái "đang tải" trong lần chạy đầu tiên
+start_time = time.time()
+with st.spinner(f"Đang tải hoặc tính toán (chờ {DELAY}s)..."):
+    # Gọi hàm đã được cache. 
+    # Tác vụ sleep(5) chỉ chạy trong lần đầu tiên hoặc khi N_ROWS thay đổi.
+    data_frame = load_heavy_data(N_ROWS, DELAY)
 
+end_time = time.time()
+duration = end_time - start_time
 
-classification = classify_bmi(bmi_value)
-
-# Hiển thị
 st.metric(
-    label="Chỉ số BMI của bạn là:", 
-    value=f"{bmi_value:.2f}"
+    label="Thời gian thực thi",
+    value=f"{duration:.2f} giây"
 )
 
-# Hiển thị phân loại với màu sắc
-if "Thiếu cân" in classification:
-    st.warning(f"Tình trạng: **{classification}**")
-elif "khỏe mạnh" in classification:
-    st.success(f"Tình trạng: **{classification}**")
-elif "Thừa cân" in classification:
-    st.error(f"Tình trạng: **{classification}**")
-elif "Béo phì" in classification:
-    st.error(f"Tình trạng: **{classification}**")
-else:
-    st.info(f"Tình trạng: **{classification}**")
+st.write(f"Đã tải DataFrame với {N_ROWS} hàng:")
+st.dataframe(data_frame.head())
 
+st.markdown("---")
 st.markdown("""
-<div style='text-align: center; margin-top: 20px;'>
-    <small>Chỉ số BMI được sử dụng để phân loại cân nặng dựa trên chiều cao và cân nặng.</small>
-</div>
-""", unsafe_allow_html=True)
+### 💡 Thử nghiệm:
+1. **Lần 1:** Chạy lần đầu sẽ mất khoảng 5 giây.
+2. **Lần 2 (Bấm nút 'Rerun'):** Bấm nút "Chạy lại (Rerun Script)". Thời gian thực thi sẽ rất nhanh (khoảng 0.01 giây) vì kết quả được lấy từ cache.
+3. **Lần 3 (Thay đổi Slider):** Thay đổi giá trị trên thanh trượt "Số lượng hàng dữ liệu". Hàm sẽ chạy lại 5 giây vì đầu vào (`num_rows`) đã thay đổi.
+""")
