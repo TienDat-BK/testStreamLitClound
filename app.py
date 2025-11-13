@@ -24,6 +24,8 @@ def load_heavy_data(num_rows, delay_time):
     """
     # Mô phỏng độ trễ (Delay)
     st.info(f"Đang thực hiện tác vụ nặng... (Chờ {delay_time} giây)")
+    # Thao tác chạy lâu:
+    # BẠN CÓ THỂ ĐẶT THỜI GIAN LÊN 20S HOẶC HƠN ĐỂ KIỂM TRA GIỚI HẠN TIMEOUT
     time.sleep(delay_time) 
     
     # Tạo một DataFrame lớn
@@ -49,13 +51,21 @@ N_ROWS = st.slider(
     key="rows"
 )
 
+# Thêm widget để chỉnh thời gian xử lý tác vụ
+DELAY = st.number_input(
+    "Chọn thời gian xử lý tác vụ (giây):",
+    min_value=1,
+    max_value=60, # Tăng giới hạn để user có thể test 20s
+    value=5,
+    step=1,
+    key="delay_time_input"
+)
+
+
 # Nút để kích hoạt việc chạy lại (Re-run)
 if st.button("Chạy lại (Rerun Script)", key="rerun_button"):
     st.toast("Đang chạy lại toàn bộ script...")
     
-# Ghi chú về thời gian delay (thời gian mô phỏng tác vụ nặng)
-DELAY = 5
-
 # ----------------------------------------------------
 # 3. Gọi hàm và xử lý Loading State
 # ----------------------------------------------------
@@ -66,7 +76,7 @@ st.subheader("Kết quả Tác vụ")
 start_time = time.time()
 with st.spinner(f"Đang tải hoặc tính toán (chờ {DELAY}s)..."):
     # Gọi hàm đã được cache. 
-    # Tác vụ sleep(5) chỉ chạy trong lần đầu tiên hoặc khi N_ROWS thay đổi.
+    # Tác vụ sleep(DELAY) chỉ chạy trong lần đầu tiên hoặc khi N_ROWS hoặc DELAY thay đổi.
     data_frame = load_heavy_data(N_ROWS, DELAY)
 
 end_time = time.time()
@@ -81,9 +91,10 @@ st.write(f"Đã tải DataFrame với {N_ROWS} hàng:")
 st.dataframe(data_frame.head())
 
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 ### 💡 Thử nghiệm:
-1. **Lần 1:** Chạy lần đầu sẽ mất khoảng 5 giây.
+1. **Lần 1:** Chạy lần đầu sẽ mất khoảng **{DELAY} giây**.
 2. **Lần 2 (Bấm nút 'Rerun'):** Bấm nút "Chạy lại (Rerun Script)". Thời gian thực thi sẽ rất nhanh (khoảng 0.01 giây) vì kết quả được lấy từ cache.
-3. **Lần 3 (Thay đổi Slider):** Thay đổi giá trị trên thanh trượt "Số lượng hàng dữ liệu". Hàm sẽ chạy lại 5 giây vì đầu vào (`num_rows`) đã thay đổi.
+3. **Lần 3 (Thay đổi Slider hoặc Thời gian xử lý):** Thay đổi giá trị trên thanh trượt hoặc trường **Thời gian xử lý**. Hàm sẽ chạy lại **{DELAY} giây** vì đầu vào đã thay đổi.
+4. **Kiểm tra giới hạn:** Thử đặt **Thời gian xử lý** là 20 giây hoặc hơn để kiểm tra ngưỡng timeout của Streamlit Cloud (thông thường là khoảng 30s).
 """)
